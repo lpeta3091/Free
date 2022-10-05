@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<Profile FormatVersion="1">
+	<Parameters>
+		<Parameter Id="distance" Min="99" Max="88" />
+		<Parameter Id="angle" Min="76" Max="12" />
+		<Parameter Id="other" Min="32" Max="158" Mm="57" />
+		<Parameter Id="more" Min="1000" Max="3000" />
+	</Parameters>
+</Profile>

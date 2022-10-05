@@ -1,0 +1,53 @@
+
+CC=gcc
+CXX=g++
+
+TARGET=lcdlind
+IDIR= -I ../../Engine/lcdgfx/src
+IDIR+= -I inc
+OBJDIR=obj
+OUTDIR=out
+LDIR= -L lib
+LIBS=  lib/liblcdgfx.a
+
+CFLAGS= $(IDIR) -W -Wall -D __ARM_LINUX__
+
+OBJ+=lcdlin.o Lcdboard.o Mqtt.o
+
+#OBJ+=$(patsubst $(CSRCDIR)/%.c,$(OBJDIR)/%.o, $(wildcard $(CSRCDIR)/*.c))
+
+all: directories $(TARGET)
+
+directories:
+	@mkdir -p $(OBJDIR)
+	@mkdir -p $(OUTDIR)
+
+$(TARGET):$(OBJ)
+	@echo Generating $(TARGET) ...
+	@$(CXX) -o $(OUTDIR)/$@ $(OBJ) $(LIBS) -l mosquittopp
+
+lcdlin.o: lcdlin.cpp
+	$(CXX) -c -o $@ $< $(CFLAGS) $(LIBS)
+Mqtt.o: Mqtt.cpp
+	$(CXX) -c -o $@ $< $(CFLAGS) $(LIBS)
+Lcdboard.o: Lcdboard.cpp
+	$(CXX) -c -o $@ $< $(CFLAGS) $(LIBS)
+
+	#sudo systemctl daemon-reload
+	#sudo systemctl restart $(TARGET)
+
+clean:
+	@echo RM -rf *.o
+	rm *.o
+#$(OBJDIR)/
+#	@rm -rf $(OBJ)
+#	@rm -rf $(OBJDIR)
+	
+#	@echo RM -rf $(OUTDIR)/
+#	@rm -rf $(OUTDIR)
+
+upload:
+	scp $(OUTDIR)/$(TARGET) $(PI):~/
+
+run:
+	ssh $(PI)

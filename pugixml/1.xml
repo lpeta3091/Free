@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>  
+<data>
+	<student>
+		<param id="distance" Name="parm1" Roll="r1"/>
+		<param id="angle" Name="parm2" Roll="r2"/>
+		<param id="p1" Name="parm3" Roll="r3"/>
+  	</student>
+</data>

@@ -1,0 +1,259 @@
+#include "inc/lcd_ili9341.h"
+#include "inc/fonts.h"
+#include <ctime>
+#include <dirent.h>
+#include <iterator>
+#include <cstdlib>
+#include <cstring>
+#include <sstream>
+#include <iostream>
+#include <stdlib.h>
+#include <string>
+#include <sys/stat.h>
+#include <syslog.h>
+#include <unistd.h>
+#include <vector>
+#include <signal.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <linux/i2c-dev.h>
+#include <sys/ioctl.h>
+#include "inc/Mqtt.h"
+
+char path_temp[] = "/sys/devices/virtual/thermal/thermal_zone0/temp";
+
+void endWork(void );
+
+bool doExit = 0;
+
+void do_heartbeat()
+{
+   // TODO: implement processing code to be performed on each heartbeat
+}
+
+void signal_handler(int sig) {
+ 
+    switch(sig) {
+        case SIGHUP:
+            syslog(LOG_WARNING, "9143.Received SIGHUP signal.");
+            break;
+        case SIGTERM:
+            syslog(LOG_WARNING, "9143.Received SIGTERM signal.");
+	    endWork();
+	    doExit = 1;;
+            break;
+        default:
+            syslog(LOG_WARNING, "9143.Unhandled signal");
+            break;
+    }
+}
+
+DisplayILI9341_240x320x16_SPI display(73,{1, 0, 70, 0,-1,-1}); // Use this line for Raspberry  (gpio24=RST, 0=CE, gpio23=D/C)
+
+
+int main()
+{
+   char str[512], strVvv[128], strTemp[128];
+   pid_t pid, sid;
+   int halt = 0;
+
+   signal(SIGHUP, signal_handler);
+   signal(SIGTERM, signal_handler);
+   signal(SIGINT, signal_handler);
+   signal(SIGQUIT, signal_handler);
+
+   int ADS_address = 0x48;       // Address of our device on the I2C bus
+   int I2CFile;
+   FILE *TEMPFile;
+   uint8_t writeBuf[3];          // Buffer to store the 3 bytes that we write to the I2C device
+   uint8_t readBuf[2];           // 2 byte buffer to store the data read from the I2C device
+   char tempBuf[16]; 
+   int16_t val;
+   float temp;
+   unsigned int readBytes = 0;                          // Stores the 16 bit value of our ADC conversion
+
+   I2CFile = open("/dev/i2c-3", O_RDWR);         // Open the I2C device
+   TEMPFile = fopen(path_temp, "r");
+   ioctl(I2CFile, I2C_SLAVE, ADS_address);   // Specify the address of the I2C Slave to communicate with
+
+   pid = fork();
+   if(pid > 0)
+   {
+      exit(EXIT_SUCCESS);
+   }
+   else if(pid < 0)
+   {
+      exit(EXIT_FAILURE);
+   }
+   umask(0);
+
+   openlog("9143", LOG_NOWAIT | LOG_PID, LOG_USER);
+   syslog(LOG_NOTICE, "9143.Successfully started st7920d");
+   sid = setsid();
+   if(sid < 0)
+   {
+      syslog(LOG_ERR, "9143.Could not generate session ID for child process");
+      exit(EXIT_FAILURE);
+   }
+
+   if((chdir("/")) < 0)
+   {
+      syslog(LOG_ERR, "9143.Could not change working directory to /");
+      exit(EXIT_FAILURE);
+   }
+
+   close(STDIN_FILENO);
+   close(STDOUT_FILENO);
+   close(STDERR_FILENO);
+
+   //const int SLEEP_INTERVAL = 5;
+
+    display.begin();
+    display.clear();
+    display.setFixedFont(ssd1306xled_font8x16);
+    display.setColor(RGB_COLOR16(255,255,0));
+    display.drawRect(1, 1, 240, 320);
+
+    display.setColor(RGB_COLOR16(255,100,255));
+    display.drawRect(3, 3, 237, 50);
+    display.drawCircle(120, 160, 50);
+
+    display.setColor(RGB_COLOR16(255,255,255));
+
+    usleep(500000);
+	std::vector<string> stla;
+        stla.push_back("senceTo/minD");
+        stla.push_back("senceTo/maxD");
+        stla.push_back("senceTo/minA");
+        stla.push_back("senceTo/maxA");
+	stla.push_back("infoToLed");
+	stla.push_back("command");
+
+        Mqtt *mqtta = new Mqtt("pc-client", "work", stla, "127.0.0.1", 1883, "user", "passw0rd");
+   	mqtta->subscribe();
+
+    std::time_t t;   // get time now
+    std::tm* now;
+    int i = 0, j = 0, k = 0;
+
+    while (!doExit) {
+	display.setColor(RGB_COLOR16(rand() % 255, rand() % 255, rand() % 255));
+	if (i <= 30000) {
+		i+=450;
+	}
+	else { i = 0; j = i + 16; k = j + 16; }
+	display.drawCircle(120, 160, rand() % 20 + 50);
+	display.setColor(i+130);
+	display.drawCircle(120, 160, 50);
+	display.setColor(RGB_COLOR16(255,255,255));
+	do_heartbeat();
+	t = std::time(0);
+  	now = std::localtime(&t);
+	display.setFixedFont(courier_new_font11x16_digits);
+	sprintf(str,"%02u:%02u:%04u %02u:%02u:%02u", now->tm_mday, now->tm_mon + 1, now->tm_year + 1900, now->tm_hour, now->tm_min, now->tm_sec);
+	display.printFixed(15, 10, str, STYLE_NORMAL);
+
+	sprintf(str,"%02d", i);
+        display.printFixed(75, 300, str, STYLE_NORMAL);
+
+  	writeBuf[0] = 1;              // This sets the pointer register so that the following two bytes write to the config register
+  	writeBuf[1] = 0xC3;           // This sets the 8 MSBs of the config register (bits 15-8) to 11000011
+  	writeBuf[2] = 0x03;           // This sets the 8 LSBs of the config register (bits 7-0) to 00000011
+
+  	readBuf[0]= 0;
+  	readBuf[1]= 0;
+  	write(I2CFile, writeBuf, 3);
+
+  	while ((readBuf[0] & 0x80) == 0)      // readBuf[0] contains 8 MSBs of config register, AND with 10000000 to select bit 15
+  	{
+          read(I2CFile, readBuf, 2);    // Read the config register into readBuf
+  	}
+
+  	writeBuf[0] = 0;                                      // Set pointer register to 0 to read from the conversion register
+  	write(I2CFile, writeBuf, 1);
+
+  	read(I2CFile, readBuf, 2);            // Read the contents of the conversion register into readBuf
+
+  	val = readBuf[0] << 8 | readBuf[1];   // Combine the two bytes of readBuf into a single 16 bit result
+
+	float vvv = (float)val*4.096/32767.0*4.94;
+
+	if (vvv <= 7.0) {
+		halt = 1;
+		endWork();
+		display.setFixedFont(ssd1306xled_font6x8);
+		display.clear();
+		sprintf(strVvv, "Low Voltage -%4.1fv", vvv);
+		display.printFixedN(15, 60, strVvv, STYLE_NORMAL,1);
+		display.printFixedN(80, 80, "Halt !", STYLE_NORMAL,1);
+            	doExit = 1;
+		system("shutdown -n now");
+		continue;
+	}
+
+	sprintf(strVvv, "%4.2f (V)", vvv);
+	display.setFixedFont(ssd1306xled_font8x16);
+	display.printFixed(50, 30, strVvv, STYLE_NORMAL);
+
+	readBytes = 0;
+	fseek(TEMPFile, 0, SEEK_SET);
+      while (readBytes < 16) {
+         int curRead = fread(tempBuf + readBytes, 1, 16 - readBytes, TEMPFile);
+          if (curRead > 0)
+             readBytes += curRead;
+          else
+             break; /* nothing more to be read */
+      }
+
+      if (readBytes > 0)
+         *(tempBuf + readBytes - 1) = 0; /* Remove last char '\n' */
+      //printf("[%s]  ", readBuf);
+
+      temp = atof(tempBuf);
+      temp /= 1000.f;
+      //printf("%.02f\n", temp);
+
+
+//        read(TEMPFile,tempBuf,6);
+	sprintf(strTemp, "Temp=%4.1f", temp);
+	display.printFixed(130, 30, strTemp, STYLE_NORMAL);
+	display.setFixedFont(ssd1306xled_font6x8);
+        display.printFixedN(80, 60, "HELLO !", STYLE_NORMAL, 1);
+	sprintf(str,"%s %s",strVvv,strTemp);
+	mqtta->publish(str);
+	//infoToLed("");
+    }
+    close(I2CFile);
+    fclose(TEMPFile);
+
+    if (!halt) {
+	display.clear();
+	display.printFixedN(75, 60, "THE END !", STYLE_NORMAL,1);
+    }
+    display.end();
+    //openlog("9143", LOG_NOWAIT | LOG_PID, LOG_USER);
+    syslog(LOG_NOTICE, "9143.End of lcdlind");
+    closelog();
+    delete mqtta;
+    exit(EXIT_SUCCESS);
+}
+
+void endWork(void )
+{
+}
+
+int infoToLed(std::string payload)
+{
+	syslog(LOG_NOTICE, payload.c_str());
+	display.setFixedFont(ssd1306xled_font6x8);
+        display.printFixedN(70, 270, /*payload.c_str()*/ " It's me...", STYLE_NORMAL, 1);
+	return 0;
+}
+
+int doEnd()
+{
+	system("shutdown -n now");
+	doExit = 1;
+	return 0;
+}

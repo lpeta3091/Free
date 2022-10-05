@@ -1,0 +1,66 @@
+/*
+int threadSecond()
+{
+        class Mqttthread *thr2;
+        int rc;
+        string message = "All right !";
+
+        mosqpp::lib_init();
+        syslog(LOG_NOTICE, "Lcdboard.Thread second successfully started");
+        thr2 = new Mqttthread("mmm", "localhost", 1883);
+        //tempconv->loop_forever();
+        while(!doExit){
+                thr2->publishP(message);
+                usleep(500000);
+        }
+        mosqpp::lib_cleanup();
+        syslog(LOG_NOTICE, "Lcdboard.Thread second successfully ended");
+}
+*/
+
+int threadSecond()
+{
+	struct mosquitto *mosq;
+	int rc;
+	syslog(LOG_NOTICE, "Lcdboard.Thread second successfully started");
+	mosquitto_lib_init();
+
+	mosq = mosquitto_new(NULL, true, NULL);
+	if(mosq == NULL){
+		syslog(LOG_NOTICE, "Lcdboard.Error: Out of memory.");
+		return 1;
+	}
+
+	//mosquitto_connect_callback_set(mosq, on_connect);
+	//mosquitto_publish_callback_set(mosq, on_publish);
+
+	rc = mosquitto_connect(mosq, "127.0.0.1", 1883, 60);
+	if(rc != MOSQ_ERR_SUCCESS){
+		mosquitto_destroy(mosq);
+		syslog(LOG_NOTICE, "Lcdboard.Error connect.");
+		return 1;
+	}
+
+	rc = mosquitto_loop_start(mosq);
+	if(rc != MOSQ_ERR_SUCCESS){
+		mosquitto_destroy(mosq);
+		syslog(LOG_NOTICE, "Lcdboard.Error loop.");
+		return 1;
+	}
+
+	while(!doExit){
+		char payload[128];
+        	int rc;
+
+	        sprintf(payload, "%s", "I am second..");
+	        rc = mosquitto_publish(mosq, NULL, "second", strlen(payload), payload, 2, false);
+	        if(rc != MOSQ_ERR_SUCCESS){
+        	        syslog(LOG_NOTICE, "Lcdboard.Error publishing.");
+        	}
+		usleep(200000);
+
+	}
+	mosquitto_lib_cleanup();
+	syslog(LOG_NOTICE, "Lcdboard.Thread second successfully ended");
+	return 0;
+}

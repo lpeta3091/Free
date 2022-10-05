@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<Parameters>
+	<param id="distance" edition="1th edition">
+		<min_distance>44</min_distance>
+		<max_distance>100</max_distance>
+		<description>It's comment...</description>
+	</param>
+	<param id="angle" edition="1th edition">
+		<min_angle>30</min_angle>
+		<max_angle>80</max_angle>
+		<description>Min and Max angle.</description>
+	</param>
+</Parameters>
