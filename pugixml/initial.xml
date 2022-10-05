@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>  
-<Profile FormatVersion="1">
-	<Tools>
-		<Tool Filename="mayabatch.exe" Timeout="40" DeriveCaptionFrom="lastparam" OutputFileMasks="*.dae" AllowRemote="true"/>
-		<Tool Filename="meshbuilder_*.exe" Timeout="10" DeriveCaptionFrom="lastparam" OutputFileMasks="*.mesh" AllowRemote="false"/>
-		<Tool Filename="texbuilder_*.exe" DeriveCaptionFrom="lastparam" OutputFileMasks="*.tex" AllowRemote="true"/>
-		<Tool Filename="shaderbuilder_*.exe" DeriveCaptionFrom="lastparam" AllowRemote="true"/>
-  	</Tools>
-</Profile>

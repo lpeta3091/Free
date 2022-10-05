@@ -4,12 +4,7 @@ CXX=g++
 
 
 TARGET=lcdboardd
-#LIBS=  lib/liblcdgfx.a
-
 CFLAGS= $(IDIR) -W -Wall -D __ARM_LINUX__ -std=c++17
-
-#OBJ+=main.o Lcdboard.o Mqtt.o Pugiparam.o
-
 IDIR= -I ../lcdgfx/src/
 IDIR+= -I /home/user/Work/lcdgfx/src/
 IDIR+= -I inc
@@ -21,9 +16,6 @@ LIBLCD=  lib/liblcdgfx.a
 SRC=src
 
 CFLAGS= $(IDIR) -W -Wall -D __ARM_LINUX__ -std=c++17
-
-#	$(OBJDIR)/U8g2lib.cpp.o\
-#OBJ+=$(OBJDIR)/main.o $(OBJDIR)/Lcdboard.o $(OBJDIR)/Mqtt.o $(OBJDIR)/Pugiparam.o
 
 OBJ+=$(patsubst $(SRC)/%.cpp,$(OBJDIR)/%.o, $(wildcard $(SRC)/*.cpp))
 
